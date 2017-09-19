@@ -1,27 +1,28 @@
 # Open Monitoring Distribution
 #
 ## VERSION	1.0
-FROM ubuntu
-MAINTAINER Johan Warlander, jwarlander@redbridge.se
+FROM centos:latest
+# original MAINTAINER Johan Warlander, jwarlander@redbridge.se
+MAINTAINER Alex Klymov al3xxx@gmail.com
 
 # Make sure package repository is up to date
-RUN echo "deb http://archive.ubuntu.com/ubuntu precise main universe" > /etc/apt/sources.list
-RUN apt-get update
-RUN apt-get upgrade -y
+# install EPEL as requirement for OMD
+RUN /bin/rm -rf /var/cache/yum &&\
+  /usr/bin/yum clean all &&\
+  /usr/bin/yum makecache fast &&\
+  /usr/bin/yum update &&\
+  /usr/bin/yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
-# Install OMD
-RUN gpg --keyserver keys.gnupg.net --recv-keys F8C1CA08A57B9ED7
-RUN gpg --armor --export F8C1CA08A57B9ED7 | apt-key add -
-RUN echo "deb http://labs.consol.de/repo/stable/ubuntu precise main" >> /etc/apt/sources.list
-RUN apt-get update
-RUN apt-get install -y libpython2.7 omd
+# Install OMD repo
+RUN /usr/bin/yum -y install "https://labs.consol.de/repo/stable/rhel7/x86_64/labs-consol-stable.rhel7.noarch.rpm" &&\
+  yum -y install omd
 
 # Set up a default site
-RUN omd create default
+RUN omd create default &&\
 # We don't want TMPFS as it requires higher privileges
-RUN omd config default set TMPFS off
+  omd config default set TMPFS off &&\
 # Accept connections on any IP address, since we get a random one
-RUN omd config default set APACHE_TCP_ADDR 0.0.0.0
+  omd config default set APACHE_TCP_ADDR 0.0.0.0
 
 # Add watchdog script
 ADD watchdog.sh /opt/omd/watchdog.sh
